@@ -12,7 +12,7 @@ const publicUser = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email,
-  role: 'Verification Analyst'
+  role: user.role || 'user'
 });
 
 export const signup = async (request, response) => {
@@ -55,6 +55,9 @@ export const login = async (request, response) => {
   if (!passwordMatches) {
     return response.status(401).json({ message: 'Invalid email or password' });
   }
+
+  user.lastLoginAt = new Date();
+  await user.save();
 
   return response.json({
     token: createToken(user._id.toString()),

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Routes,
   Route,
@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider } from './auth/AuthContext';
+import { AdminRoute } from './auth/AdminRoute';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { MainLayout } from './layouts/MainLayout';
 
@@ -20,6 +21,7 @@ import { ImageAnalysis } from './pages/ImageAnalysis';
 import { VideoAnalysis } from './pages/VideoAnalysis';
 import { Results } from './pages/Results';
 import { History } from './pages/History';
+import { AdminUsers } from './pages/AdminUsers';
 
 
 /* =========================================
@@ -200,6 +202,10 @@ export default function App() {
               path="/history"
               element={<History />}
             />
+
+            <Route element={<AdminRoute />}>
+              <Route path="/admin/users" element={<AdminUsers />} />
+            </Route>
 
           </Route>
 

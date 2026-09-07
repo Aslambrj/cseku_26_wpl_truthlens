@@ -591,6 +591,17 @@ export const Navbar = () => {
                 History
               </NavLink>
 
+              {user?.role === 'admin' && (
+                <NavLink
+                  to="/admin/users"
+                  className={({ isActive }) =>
+                    `truthlens-nav-link ${isActive ? 'active' : ''}`
+                  }
+                >
+                  Admin
+                </NavLink>
+              )}
+
               <div className="truthlens-auth-area">
                 <div className="truthlens-user">
                   <div className="truthlens-user-avatar">
