@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 export const VideoAnalysis = ({
   runAnalysisPipeline
@@ -8,6 +9,7 @@ export const VideoAnalysis = ({
   const [preview, setPreview] = useState(null);
 
   const navigate = useNavigate();
+  const { addHistoryItem } = useAuth();
 
   const handleVideoChange = (e) => {
     const file = e.target.files?.[0];
@@ -20,10 +22,13 @@ export const VideoAnalysis = ({
     setPreview(URL.createObjectURL(file));
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    const content = video?.name || 'Video analysis';
+
+    await addHistoryItem({ type: 'video', content });
     runAnalysisPipeline(
       'video',
-      video?.name || 'Video analysis',
+      content,
       () => navigate('/results')
     );
   };

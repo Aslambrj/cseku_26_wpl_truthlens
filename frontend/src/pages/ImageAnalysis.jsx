@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 export const ImageAnalysis = ({
   runAnalysisPipeline
@@ -8,6 +9,7 @@ export const ImageAnalysis = ({
   const [preview, setPreview] = useState(null);
 
   const navigate = useNavigate();
+  const { addHistoryItem } = useAuth();
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -20,10 +22,13 @@ export const ImageAnalysis = ({
     setPreview(URL.createObjectURL(file));
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    const content = image?.name || 'Image analysis';
+
+    await addHistoryItem({ type: 'image', content });
     runAnalysisPipeline(
       'image',
-      image?.name || 'Image analysis',
+      content,
       () => navigate('/results')
     );
   };

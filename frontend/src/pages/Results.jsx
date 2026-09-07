@@ -15,8 +15,8 @@ export const Results = () => {
     );
   }
 
-  const isHighRisk =
-    lastAnalysis.confidence > 80;
+  const hasModelResult = Number.isFinite(lastAnalysis.confidence);
+  const isHighRisk = hasModelResult && lastAnalysis.confidence > 80;
 
   return (
     <>
@@ -263,7 +263,7 @@ export const Results = () => {
         <div className="results-container">
           <header className="results-header">
             <div className="results-eyebrow">
-              ANALYSIS COMPLETE
+              {hasModelResult ? 'ANALYSIS COMPLETE' : 'MODEL IN PROGRESS'}
             </div>
 
             <h1>
@@ -275,11 +275,13 @@ export const Results = () => {
             <div>
               <section className="results-card">
                 <h2 className="results-assessment">
-                  {lastAnalysis.assessment}
+                  {hasModelResult ? lastAnalysis.assessment : 'Your analysis is queued'}
                 </h2>
 
                 <p className="results-description">
-                  {lastAnalysis.explanation}
+                  {hasModelResult
+                    ? lastAnalysis.explanation
+                    : 'Your submission was saved successfully. The verification model is currently being connected, so detailed results will appear here when processing is available.'}
                 </p>
               </section>
 
@@ -295,13 +297,14 @@ export const Results = () => {
                     </span>
 
                     <span className="results-risk">
-                      High Risk
+                      {hasModelResult ? 'High Risk' : 'Processing'}
                     </span>
                   </div>
 
                   <div className="results-signal-description">
-                    Measured data points deviate from
-                    known peer-reviewed controls.
+                    {hasModelResult
+                      ? 'Measured data points deviate from known peer-reviewed controls.'
+                      : 'The model has not returned confidence or signal data yet.'}
                   </div>
                 </div>
               </section>
@@ -310,17 +313,18 @@ export const Results = () => {
             <aside className="results-card results-score-card">
               <div className="results-score-circle">
                 <span>
-                  {lastAnalysis.confidence}%
+                  {hasModelResult ? `${lastAnalysis.confidence}%` : 'Pending'}
                 </span>
               </div>
 
               <div className="results-score-title">
-                Confidence Estimate
+                {hasModelResult ? 'Confidence Estimate' : 'Model Status'}
               </div>
 
               <p className="results-score-description">
-                Based on aggregated probability vectors
-                across independent checks.
+                {hasModelResult
+                  ? 'Based on aggregated probability vectors across independent checks.'
+                  : 'The analysis record is stored. Detailed scoring will be available after the model is connected.'}
               </p>
 
               <button

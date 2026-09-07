@@ -218,24 +218,15 @@ export const History = () => {
                 <table className="history-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
                       <th>Type</th>
                       <th>Content Summary</th>
                       <th>Timestamp</th>
-                      <th>Confidence</th>
-                      <th>Result</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {history.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <span className="history-id">
-                            {item.id}
-                          </span>
-                        </td>
-
+                      <tr key={item._id}>
                         <td>
                           {item.type}
                         </td>
@@ -247,21 +238,7 @@ export const History = () => {
                         </td>
 
                         <td>
-                          {item.date}
-                        </td>
-
-                        <td>
-                          {item.confidence}%
-                        </td>
-
-                        <td>
-                          <span
-                            className={`history-badge ${
-                              item.badge || ''
-                            }`}
-                          >
-                            {item.result}
-                          </span>
+                          {new Date(item.createdAt).toLocaleString()}
                         </td>
                       </tr>
                     ))}
