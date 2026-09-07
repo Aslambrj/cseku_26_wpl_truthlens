@@ -82,10 +82,6 @@ export const Login = () => {
               </label>
 
               <div className="input-wrapper">
-                <span className="input-icon">
-                  @
-                </span>
-
                 <input
                   id="email"
                   type="email"
@@ -111,10 +107,6 @@ export const Login = () => {
               </div>
 
               <div className="input-wrapper">
-                <span className="input-icon">
-                  •••
-                </span>
-
                 <input
                   id="password"
                   type="password"

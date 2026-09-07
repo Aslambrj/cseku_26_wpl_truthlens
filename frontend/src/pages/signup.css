@@ -500,7 +500,8 @@
 
   background: #ffffff;
 
-  color: #0f172a;
+  color: #000000;
+  color-scheme: light;
 
   font-family: inherit;
   font-size: 14px;
@@ -533,6 +534,15 @@
 
   box-shadow:
     0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.signup-input-wrapper input:-webkit-autofill,
+.signup-input-wrapper input:-webkit-autofill:hover,
+.signup-input-wrapper input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000000;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  caret-color: #000000;
 }
 
 /* =========================================

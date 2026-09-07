@@ -110,11 +110,6 @@ export const Signup = () => {
               </label>
 
               <div className="signup-input-wrapper">
-
-                <span className="signup-input-icon">
-                  ◉
-                </span>
-
                 <input
                   id="signup-name"
                   type="text"
@@ -137,11 +132,6 @@ export const Signup = () => {
               </label>
 
               <div className="signup-input-wrapper">
-
-                <span className="signup-input-icon">
-                  @
-                </span>
-
                 <input
                   id="signup-email"
                   type="email"
@@ -172,11 +162,6 @@ export const Signup = () => {
               </div>
 
               <div className="signup-input-wrapper">
-
-                <span className="signup-input-icon">
-                  •••
-                </span>
-
                 <input
                   id="signup-password"
                   type="password"
@@ -200,11 +185,6 @@ export const Signup = () => {
               </label>
 
               <div className="signup-input-wrapper">
-
-                <span className="signup-input-icon">
-                  •••
-                </span>
-
                 <input
                   id="signup-confirm-password"
                   type="password"

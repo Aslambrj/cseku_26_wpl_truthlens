@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 export const TextAnalysis = ({
   runAnalysisPipeline
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { addHistoryItem } = useAuth();
 
   const [text, setText] = useState(
     location.state?.claim || ''
   );
 
-  const handleRun = () => {
+  const handleRun = async () => {
+    const content = text || 'Custom claim evaluation';
+
+    await addHistoryItem({ type: 'text', content });
     runAnalysisPipeline(
       'text',
-      text || 'Custom claim evaluation',
+      content,
       () => navigate('/results')
     );
   };
