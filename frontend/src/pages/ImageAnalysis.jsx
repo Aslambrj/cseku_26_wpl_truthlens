@@ -9,7 +9,9 @@ export const ImageAnalysis = ({
   const [preview, setPreview] = useState(null);
 
   const navigate = useNavigate();
-  const { addHistoryItem } = useAuth();
+  const { submitImageAnalysis } = useAuth();
+  const [error, setError] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -20,17 +22,24 @@ export const ImageAnalysis = ({
 
     setImage(file);
     setPreview(URL.createObjectURL(file));
+    setError('');
   };
 
   const handleAnalyze = async () => {
-    const content = image?.name || 'Image analysis';
-
-    await addHistoryItem({ type: 'image', content });
-    runAnalysisPipeline(
-      'image',
-      content,
-      () => navigate('/results')
-    );
+    if (!image || isAnalyzing) {
+      setError('Choose an image before running analysis.');
+      return;
+    }
+    setIsAnalyzing(true);
+    setError('');
+    try {
+      await submitImageAnalysis(image);
+      runAnalysisPipeline('image', image.name, () => navigate('/results'));
+    } catch (analysisError) {
+      setError(analysisError.message);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -307,9 +316,12 @@ export const ImageAnalysis = ({
               <button
                 className="image-analyze-button"
                 onClick={handleAnalyze}
+                disabled={isAnalyzing}
               >
-                Analyze Image →
+                {isAnalyzing ? 'Analyzing image…' : 'Analyze Image →'}
               </button>
+
+              {error && <p style={{ color: '#dc2626', fontSize: '13px', margin: '12px 0 0' }}>{error}</p>}
             </section>
 
             <aside className="image-card">

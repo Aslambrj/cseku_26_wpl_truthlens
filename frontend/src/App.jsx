@@ -22,6 +22,7 @@ import { VideoAnalysis } from './pages/VideoAnalysis';
 import { Results } from './pages/Results';
 import { History } from './pages/History';
 import { AdminUsers } from './pages/AdminUsers';
+import { SharedReport } from './pages/SharedReport';
 
 
 /* =========================================
@@ -110,6 +111,8 @@ export default function App() {
           path="/signup"
           element={<Signup />}
         />
+
+        <Route path="/shared/:shareId" element={<SharedReport />} />
 
 
         {/* =====================================
@@ -216,4 +219,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

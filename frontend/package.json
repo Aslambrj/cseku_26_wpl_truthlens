@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@openrouter/sdk": "^1.3.32",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
     "lucide-react": "^1.37.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

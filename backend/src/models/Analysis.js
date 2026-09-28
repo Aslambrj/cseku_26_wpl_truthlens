@@ -17,7 +17,9 @@ const analysisSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
-    }
+    },
+    result: { type: mongoose.Schema.Types.Mixed },
+    shareId: { type: String, unique: true, sparse: true }
   },
   { timestamps: true }
 );
