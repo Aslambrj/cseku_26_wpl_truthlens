@@ -8,12 +8,12 @@ export const apiRequest = async (path, options = {}) => {
   let response;
   try {
     response = await fetch(`${API_URL}${path}`, {
+      ...options,
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers
-      },
-      ...options
+      }
     });
   } catch {
     throw new Error('Could not reach the TruthLens API. Start the backend server and check its API URL.');

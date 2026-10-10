@@ -1,36 +1,63 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
-export const VideoAnalysis = ({
-  runAnalysisPipeline
-}) => {
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+
+export const VideoAnalysis = () => {
   const [video, setVideo] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState('');
 
   const navigate = useNavigate();
-  const { addHistoryItem } = useAuth();
+  const { submitVideoAnalysis } = useAuth();
+
+  useEffect(() => {
+    if (!preview) return undefined;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
 
   const handleVideoChange = (e) => {
     const file = e.target.files?.[0];
+    e.currentTarget.value = '';
 
     if (!file) {
       return;
     }
 
+    const extension = `.${file.name.split('.').pop()}`.toLowerCase();
+    if (!VIDEO_EXTENSIONS.includes(extension)) {
+      setVideo(null);
+      setPreview(null);
+      setError('Choose an MP4, AVI, MOV, MKV, or WEBM video.');
+      return;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      setVideo(null);
+      setPreview(null);
+      setError('Videos must be 50 MB or smaller.');
+      return;
+    }
+
     setVideo(file);
     setPreview(URL.createObjectURL(file));
+    setError('');
   };
 
   const handleAnalyze = async () => {
-    const content = video?.name || 'Video analysis';
-
-    await addHistoryItem({ type: 'video', content });
-    runAnalysisPipeline(
-      'video',
-      content,
-      () => navigate('/results')
-    );
+    if (!video || isAnalyzing) return;
+    setIsAnalyzing(true);
+    setError('');
+    try {
+      await submitVideoAnalysis(video);
+      navigate('/results');
+    } catch (analysisError) {
+      setError(analysisError.message || 'Video analysis failed. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -214,6 +241,19 @@ export const VideoAnalysis = ({
           transform: translateY(0);
         }
 
+        .video-analyze-button:disabled {
+          background: #94a3b8;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .video-error {
+          margin: 12px 0 0;
+          color: #b91c1c;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+
         .video-info-title {
           margin: 0 0 16px;
 
@@ -262,8 +302,7 @@ export const VideoAnalysis = ({
             </h1>
 
             <p>
-              Analyze video frames and temporal
-              consistency for manipulation signals.
+              Sample frames from a video and estimate whether the visible face imagery may be manipulated.
             </p>
           </header>
 
@@ -273,7 +312,7 @@ export const VideoAnalysis = ({
                 <input
                   className="video-input"
                   type="file"
-                  accept="video/*"
+                  accept=".mp4,.avi,.mov,.mkv,.webm,video/mp4,video/quicktime,video/webm"
                   onChange={handleVideoChange}
                 />
 
@@ -294,7 +333,7 @@ export const VideoAnalysis = ({
                     </div>
 
                     <div className="video-upload-description">
-                      MP4, MOV or WEBM
+                      MP4, AVI, MOV, MKV or WEBM · up to 50 MB
                     </div>
                   </div>
                 )}
@@ -303,9 +342,11 @@ export const VideoAnalysis = ({
               <button
                 className="video-analyze-button"
                 onClick={handleAnalyze}
+                disabled={!video || isAnalyzing}
               >
-                Analyze Video →
+                {isAnalyzing ? 'Analyzing video…' : 'Analyze Video →'}
               </button>
+              {error && <p className="video-error" role="alert">{error}</p>}
             </section>
 
             <aside className="video-card">
@@ -315,19 +356,19 @@ export const VideoAnalysis = ({
 
               <ol className="video-info-list">
                 <li>
-                  Extract frame-level features.
+                  Sample up to 12 frames across the video.
                 </li>
 
                 <li>
-                  Analyze temporal consistency.
+                  Detect and crop faces where possible.
                 </li>
 
                 <li>
-                  Detect manipulation signals.
+                  Estimate a manipulation score for each sampled frame.
                 </li>
 
                 <li>
-                  Generate confidence-based evidence.
+                  Average the scores and compare them with the model threshold.
                 </li>
               </ol>
             </aside>

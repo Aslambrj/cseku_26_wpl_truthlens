@@ -17,6 +17,15 @@ export const analyzeText = (content, sourceUrl = '') => apiRequest('/analyses/te
   body: JSON.stringify({ content, sourceUrl })
 });
 
+export const analyzeVideo = (filename, video) => apiRequest('/analyses/video', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/octet-stream',
+    'X-File-Name': encodeURIComponent(filename),
+  },
+  body: video,
+});
+
 export const createAnalysisShareLink = (analysisId) => apiRequest(`/analyses/${analysisId}/share`, {
   method: 'POST'
 });

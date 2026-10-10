@@ -1,11 +1,15 @@
 import { Analysis } from '../models/Analysis.js';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
 import { analyzeTextClaim } from '../../Text Model/textAnalysis.js';
 
 const modelScript = fileURLToPath(new URL('../../Image Model/predict_image.py', import.meta.url));
+const videoModelScript = fileURLToPath(new URL('../../Video Model/predict_video.py', import.meta.url));
 const pythonCommand = process.env.PYTHON_EXECUTABLE || (process.platform === 'win32' ? 'python' : 'python3');
 
 const runImageModel = (imageBase64) => new Promise((resolve, reject) => {
@@ -27,6 +31,24 @@ const runImageModel = (imageBase64) => new Promise((resolve, reject) => {
   child.stdin.end(imageBase64);
 });
 
+const runVideoModel = (videoPath) => new Promise((resolve, reject) => {
+  const child = spawn(pythonCommand, [videoModelScript, videoPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let output = '';
+  let errorOutput = '';
+  child.stdout.on('data', (chunk) => { output += chunk; });
+  child.stderr.on('data', (chunk) => { errorOutput += chunk; });
+  child.on('error', reject);
+  child.on('close', (code) => {
+    try {
+      const result = JSON.parse(output);
+      if (code !== 0 || result.error) throw new Error(result.error || errorOutput || 'Video model failed');
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    }
+  });
+});
+
 export const analyzeImage = async (request, response) => {
   const { filename, image } = request.body;
   const maxImageBytes = 8 * 1024 * 1024;
@@ -40,21 +62,85 @@ export const analyzeImage = async (request, response) => {
   try {
     const result = await runImageModel(imageBase64);
     const assessment = result.label === 'AI-Generated' ? 'Likely AI-generated image' : 'Likely authentic image';
-    const analysis = await Analysis.create({ userId: request.user._id, type: 'image', content: filename.trim(), result });
+    const confidence = result.label === 'AI-Generated' ? result.aiProbability : result.realProbability;
+    const thresholdPercent = Math.round(result.threshold * 100);
+    const explanation = `AI-generated probability: ${result.aiProbability}%. Decision threshold: ${thresholdPercent}%. This model estimate alone cannot prove how the image was created.`;
+    const savedResult = { ...result, confidence, explanation };
+    const analysis = await Analysis.create({ userId: request.user._id, type: 'image', content: filename.trim(), result: savedResult });
     return response.status(201).json({
       analysis,
       result: {
-        confidence: result.aiProbability,
+        confidence,
         assessment,
-        explanation: `The model estimates a ${result.aiProbability}% probability that this image is AI-generated (${result.realProbability}% real-image probability).`,
+        explanation,
         ...result
       }
     });
   } catch (error) {
     console.error('Image analysis failed:', error.message);
-    return response.status(503).json({ message: 'The image model is unavailable. Install the Python requirements and try again.' });
+    return response.status(503).json({ message: error.message || 'Image analysis is unavailable. Check the image model setup and try again.' });
   }
 };
+
+export const analyzeVideo = async (request, response) => {
+  const supportedExtensions = new Set(['.mp4', '.avi', '.mov', '.mkv', '.webm']);
+  let filename;
+  try {
+    filename = decodeURIComponent(request.get('x-file-name') || '');
+  } catch {
+    return response.status(400).json({ message: 'Video filename is invalid' });
+  }
+  filename = path.basename(filename.replace(/\\/g, '/')).trim();
+  const extension = path.extname(filename).toLowerCase();
+  const maxVideoBytes = 50 * 1024 * 1024;
+  if (!filename || !supportedExtensions.has(extension) || !Buffer.isBuffer(request.body) || request.body.length === 0) {
+    return response.status(400).json({ message: 'Upload an MP4, AVI, MOV, MKV, or WEBM video' });
+  }
+  if (request.body.length > maxVideoBytes) {
+    return response.status(413).json({ message: 'Videos must be 50 MB or smaller' });
+  }
+
+  const tempDirectory = await mkdtemp(path.join(os.tmpdir(), 'truthlens-video-'));
+  const videoPath = path.join(tempDirectory, `${randomUUID()}${extension}`);
+  try {
+    await writeFile(videoPath, request.body);
+    const prediction = await runVideoModel(videoPath);
+    const fakeProbability = Number((prediction.fake_score * 100).toFixed(2));
+    const realProbability = Number((100 - fakeProbability).toFixed(2));
+    const isFake = prediction.prediction === 'FAKE';
+    const faceNote = prediction.face_fallback_used
+      ? ' No faces were detected, so center crops were analyzed; treat this result as less reliable.'
+      : ` The model detected faces in ${prediction.frames_with_face} of the analyzed frames.`;
+    const result = {
+      label: prediction.prediction,
+      assessment: isFake ? 'Likely manipulated video' : 'Likely authentic video',
+      confidence: Math.round(prediction.confidence * 100),
+      fakeProbability,
+      realProbability,
+      threshold: prediction.threshold,
+      framesAnalyzed: prediction.frames_analyzed,
+      framesWithFace: prediction.frames_with_face,
+      faceFallbackUsed: prediction.face_fallback_used,
+      frameProbabilities: prediction.frame_probabilities,
+      sampledFrames: prediction.sampled_frames,
+      model: prediction.model,
+      processingSeconds: prediction.processing_seconds,
+      explanation: `The model sampled ${prediction.frames_analyzed} frames and averaged their manipulation scores. The average AI-manipulation score was ${fakeProbability}%, compared with the ${Math.round(prediction.threshold * 100)}% decision threshold, so the video was labeled ${prediction.prediction}. ${resultConfidenceDescription(prediction.confidence)}${faceNote} This is a model estimate, not proof that a video was edited.`,
+    };
+    const storedResult = { ...result };
+    delete storedResult.sampledFrames;
+    const analysis = await Analysis.create({ userId: request.user._id, type: 'video', content: filename, result: storedResult });
+    return response.status(201).json({ analysis, result });
+  } catch (error) {
+    console.error('Video analysis failed:', error.message);
+    return response.status(503).json({ message: error.message || 'The video model is unavailable. Install its requirements and try again.' });
+  } finally {
+    await rm(tempDirectory, { recursive: true, force: true });
+  }
+};
+
+const resultConfidenceDescription = (confidence) =>
+  `the confidence indicator is ${Math.round(confidence * 100)}% (a heuristic based on distance from the threshold, not a calibrated probability).`;
 
 export const analyzeText = async (request, response) => {
   const { content } = request.body;

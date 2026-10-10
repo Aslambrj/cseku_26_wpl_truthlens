@@ -23,6 +23,7 @@ import { Results } from './pages/Results';
 import { History } from './pages/History';
 import { AdminUsers } from './pages/AdminUsers';
 import { SharedReport } from './pages/SharedReport';
+import { Pricing } from './pages/Pricing';
 
 
 /* =========================================
@@ -112,6 +113,10 @@ export default function App() {
           element={<Signup />}
         />
 
+        <Route element={<MainLayout />}>
+          <Route path="/pricing" element={<Pricing />} />
+        </Route>
+
         <Route path="/shared/:shareId" element={<SharedReport />} />
 
 
@@ -181,13 +186,7 @@ export default function App() {
 
             <Route
               path="/video"
-              element={
-                <VideoAnalysis
-                  runAnalysisPipeline={
-                    runAnalysisPipeline
-                  }
-                />
-              }
+              element={<VideoAnalysis />}
             />
 
 

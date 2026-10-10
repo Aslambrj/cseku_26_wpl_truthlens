@@ -13,12 +13,22 @@ const getResultInfo = (item) => {
     };
   }
 
-  if (item.result?.label) {
-    const isGenerated = item.result.label === 'AI-Generated';
-    const probability = Number(item.result.aiProbability);
+  if (item.type === 'video' && item.result?.label) {
+    const confidence = Number(item.result.confidence);
+    const isFake = item.result.label === 'FAKE';
     return {
       label: item.result.label,
-      detail: Number.isFinite(probability) ? `${Number(probability.toFixed(1))}% AI probability` : 'Image analysis complete',
+      detail: Number.isFinite(confidence) ? `${confidence}% confidence` : 'Video analysis complete',
+      tone: isFake ? 'negative' : 'positive'
+    };
+  }
+
+  if (item.type === 'image' && item.result?.label) {
+    const isGenerated = item.result.label === 'AI-Generated';
+    const probability = Number(item.result.confidence ?? (isGenerated ? item.result.aiProbability : item.result.realProbability));
+    return {
+      label: item.result.label,
+      detail: Number.isFinite(probability) ? `${Number(probability.toFixed(1))}% ${isGenerated ? 'AI' : 'real'} confidence` : 'Image analysis complete',
       tone: isGenerated ? 'negative' : 'positive'
     };
   }

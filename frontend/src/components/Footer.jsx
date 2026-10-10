@@ -325,7 +325,7 @@ export const Footer = () => {
             {/* Brand */}
             <div className="truthlens-footer-brand-section">
               <Link
-                to="/home"
+                to="/pricing"
                 className="truthlens-footer-brand"
               >
                 <div className="truthlens-footer-logo">
@@ -370,6 +370,13 @@ export const Footer = () => {
                   className="truthlens-footer-link"
                 >
                   Home
+                </Link>
+
+                <Link
+                  to="/pricing"
+                  className="truthlens-footer-link"
+                >
+                  Plans
                 </Link>
 
                 <Link
@@ -502,4 +509,3 @@ export const Footer = () => {
     </>
   );
 };
-

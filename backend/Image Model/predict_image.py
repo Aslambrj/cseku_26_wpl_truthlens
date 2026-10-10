@@ -17,11 +17,12 @@ except ImportError as error:
 
 MODEL_PATH = Path(__file__).with_name("truthlens_b0_v4.pt")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DECISION_THRESHOLD = 0.3
 
 def load_model():
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
     image_size = checkpoint["img_size"]
-    threshold = checkpoint["threshold"]
+    threshold = DECISION_THRESHOLD
     model = timm.create_model(checkpoint["arch"], pretrained=False, num_classes=2).to(DEVICE)
     model.load_state_dict(checkpoint["model_state"])
     model.eval()

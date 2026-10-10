@@ -15,8 +15,18 @@ const getItemResult = (item) => {
     return { label: verdict, detail: Number.isFinite(confidence) ? `${Math.round(confidence)}% confidence` : 'Text review', tone: verdict === 'Supported' ? 'good' : verdict === 'Unsupported' ? 'bad' : 'mixed' };
   }
   if (item.type === 'image' && item.result?.label) {
-    const probability = Number(item.result.aiProbability);
-    return { label: item.result.label, detail: Number.isFinite(probability) ? `${Math.round(probability)}% AI probability` : 'Image review', tone: item.result.label === 'AI-Generated' ? 'bad' : 'good' };
+    const isGenerated = item.result.label === 'AI-Generated';
+    const probability = Number(item.result.confidence ?? (isGenerated ? item.result.aiProbability : item.result.realProbability));
+    return { label: item.result.label, detail: Number.isFinite(probability) ? `${Math.round(probability)}% ${isGenerated ? 'AI' : 'real'} confidence` : 'Image review', tone: isGenerated ? 'bad' : 'good' };
+  }
+  if (item.type === 'video' && item.result?.label) {
+    const confidence = Number(item.result.confidence);
+    const isFake = item.result.label === 'FAKE';
+    return {
+      label: item.result.label,
+      detail: Number.isFinite(confidence) ? `${confidence}% confidence` : 'Video review',
+      tone: isFake ? 'bad' : 'good',
+    };
   }
   return { label: 'Saved', detail: 'Result unavailable', tone: 'neutral' };
 };

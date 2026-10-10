@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { createAnalysisShareLink } from '../services/analysisService';
@@ -9,6 +9,21 @@ export const Results = () => {
   const [shareUrl, setShareUrl] = useState('');
   const [shareMessage, setShareMessage] = useState('');
   const [isSharing, setIsSharing] = useState(false);
+  const videoElementRef = useRef(null);
+
+  useEffect(() => {
+    const videoFile = lastAnalysis?.videoFile;
+    const videoElement = videoElementRef.current;
+    if (!videoFile || !videoElement) return undefined;
+
+    const previewUrl = URL.createObjectURL(videoFile);
+    videoElement.src = previewUrl;
+    return () => {
+      videoElement.removeAttribute('src');
+      videoElement.load();
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [lastAnalysis?.videoFile]);
 
   if (!lastAnalysis) {
     return (
@@ -19,8 +34,27 @@ export const Results = () => {
     );
   }
 
-  const hasModelResult = Number.isFinite(lastAnalysis.confidence);
-  const isHighRisk = hasModelResult && lastAnalysis.confidence > 80;
+  const imageConfidence = Number(lastAnalysis.label === 'AI-Generated' ? lastAnalysis.aiProbability : lastAnalysis.realProbability);
+  const displayedConfidence = lastAnalysis.type === 'image' && !Number.isFinite(lastAnalysis.confidence)
+    ? imageConfidence
+    : Number(lastAnalysis.confidence);
+  const hasModelResult = Number.isFinite(displayedConfidence);
+  const verdict = lastAnalysis.assessment || lastAnalysis.verdict || lastAnalysis.label;
+  const outcome = String(lastAnalysis.verdict || lastAnalysis.label || lastAnalysis.assessment || '').toLowerCase();
+  const isNegativeOutcome = hasModelResult && (
+    lastAnalysis.type === 'image'
+      ? outcome.includes('ai-generated')
+      : lastAnalysis.type === 'video'
+        ? ['fake', 'manipulated', 'deepfake'].some((term) => outcome.includes(term))
+        : ['unsupported', 'misleading', 'unverified', 'suspicious', 'suspect', 'misinformation'].some((term) => outcome.includes(term))
+  );
+  const isPositiveOutcome = hasModelResult && (
+    lastAnalysis.type === 'image'
+      ? outcome.includes('authentic') || outcome.includes('real')
+      : lastAnalysis.type === 'video'
+        ? outcome.includes('real') || outcome.includes('authentic')
+        : outcome === 'supported'
+  );
   const handleShare = async () => {
     if (!lastAnalysis.analysisId || isSharing) return;
     setIsSharing(true);
@@ -92,7 +126,19 @@ export const Results = () => {
             minmax(0, 1.5fr)
             minmax(280px, 0.7fr);
 
+          align-items: start;
           gap: 22px;
+        }
+
+        .results-details {
+          grid-column: 1;
+          grid-row: 1;
+          min-height: 0;
+          max-height: calc(100vh - 240px + 1cm);
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          padding-right: 8px;
+          scrollbar-gutter: stable;
         }
 
         .results-card {
@@ -137,6 +183,17 @@ export const Results = () => {
           word-break: break-word;
         }
 
+        .results-video-preview {
+          display: block;
+          width: 100%;
+          max-height: 430px;
+          aspect-ratio: 16 / 9;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          background: #0f172a;
+          object-fit: contain;
+        }
+
         .results-assessment {
           margin: 7px 0 12px;
 
@@ -148,6 +205,7 @@ export const Results = () => {
 
         .results-description {
           margin: 0;
+          white-space: pre-line;
 
           color: #64748b;
 
@@ -317,7 +375,69 @@ export const Results = () => {
           line-height: 1.5;
         }
 
+        .results-video-steps {
+          margin: 14px 0 0;
+          padding-left: 20px;
+          color: #64748b;
+          font-size: 13px;
+          line-height: 1.8;
+        }
+
+        .results-video-frame-count {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+          margin: 14px 0 0;
+          color: #334155;
+          font-size: 13px;
+        }
+
+        .results-video-frame-count strong {
+          color: #0f172a;
+          font-size: 18px;
+        }
+
+        .results-video-frames-title {
+          margin: 20px 0 10px;
+          color: #0f172a;
+          font-size: 14px;
+          font-weight: 750;
+        }
+
+        .results-video-frame-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+          gap: 12px;
+        }
+
+        .results-video-frame-card {
+          min-width: 0;
+          overflow: hidden;
+          border: 1px solid #e2e8f0;
+          border-radius: 9px;
+          background: #f8fafc;
+        }
+
+        .results-video-frame-image {
+          display: block;
+          width: 100%;
+          aspect-ratio: 1;
+          object-fit: cover;
+          background: #e2e8f0;
+        }
+
+        .results-video-frame-caption {
+          padding: 7px 8px;
+          color: #475569;
+          font-size: 11px;
+          line-height: 1.4;
+        }
+
         .results-score-card {
+          position: sticky;
+          top: 88px;
+          grid-column: 2;
+          grid-row: 1;
           text-align: center;
         }
 
@@ -334,9 +454,9 @@ export const Results = () => {
           border: 10px solid;
 
           border-color: ${
-            isHighRisk
-              ? '#fecaca'
-              : '#bfdbfe'
+            isNegativeOutcome
+              ? '#dc2626'
+              : isPositiveOutcome ? '#bbf7d0' : '#bfdbfe'
           };
 
           border-radius: 50%;
@@ -346,9 +466,9 @@ export const Results = () => {
 
         .results-score-circle span {
           color: ${
-            isHighRisk
+            isNegativeOutcome
               ? '#dc2626'
-              : '#2563eb'
+              : isPositiveOutcome ? '#16a34a' : '#2563eb'
           };
 
           font-size: 30px;
@@ -371,6 +491,18 @@ export const Results = () => {
 
           font-size: 12px;
 
+          line-height: 1.5;
+        }
+
+        .results-score-verdict {
+          margin: 0 0 12px;
+          color: ${
+            isNegativeOutcome
+              ? '#dc2626'
+              : isPositiveOutcome ? '#16a34a' : '#334155'
+          };
+          font-size: 13px;
+          font-weight: 750;
           line-height: 1.5;
         }
 
@@ -410,6 +542,18 @@ export const Results = () => {
           .results-layout {
             grid-template-columns: 1fr;
           }
+
+          .results-score-card {
+            top: 72px;
+            grid-column: 1;
+            grid-row: 1;
+          }
+
+          .results-details {
+            grid-column: 1;
+            grid-row: 2;
+            max-height: calc(100vh - 330px + 1cm);
+          }
         }
 
         @media (max-width: 520px) {
@@ -436,7 +580,7 @@ export const Results = () => {
           </header>
 
           <div className="results-layout">
-            <div>
+            <div className="results-details">
               <section className="results-card">
                 <h2 className="results-assessment">
                   {hasModelResult ? lastAnalysis.assessment : 'Your analysis is queued'}
@@ -473,6 +617,21 @@ export const Results = () => {
                       {lastAnalysis.imageName}
                     </p>
                   )}
+                </section>
+              )}
+              {lastAnalysis.type === 'video' && lastAnalysis.videoName && (
+                <section className="results-card">
+                  <h3 className="results-section-title">Analyzed Video</h3>
+                  {lastAnalysis.videoFile && (
+                    <video
+                      ref={videoElementRef}
+                      controls
+                      preload="metadata"
+                      className="results-video-preview"
+                      aria-label={`Analyzed video: ${lastAnalysis.videoName}`}
+                    />
+                  )}
+                  <p className="results-image-name">{lastAnalysis.videoName}</p>
                 </section>
               )}
 
@@ -532,18 +691,66 @@ export const Results = () => {
                     )}
                   </section>
                 </>
-              ) : (
+              ) : lastAnalysis.type === 'image' ? (
                 <section className="results-card">
-                  <h3 className="results-section-title">Evidence & Detected Signals</h3>
+                  <h3 className="results-section-title">How to read this image result</h3>
                   <div className="results-signal">
                     <div className="results-signal-header">
-                      <span>Primary Divergence Vector</span>
-                      <span className="results-risk">{hasModelResult ? 'High Risk' : 'Processing'}</span>
+                      <span>Model estimates</span>
+                      <span>{hasModelResult ? lastAnalysis.label : 'Processing'}</span>
                     </div>
                     <div className="results-signal-description">
-                      {hasModelResult ? 'Measured data points deviate from known peer-reviewed controls.' : 'The model has not returned confidence or signal data yet.'}
+                      {hasModelResult
+                        ? `AI-generated probability: ${lastAnalysis.aiProbability}%. Real-image probability: ${lastAnalysis.realProbability}%. The model labels an image AI-generated when its AI probability reaches the ${(Number(lastAnalysis.threshold ?? 0.3) * 100).toFixed(0)}% threshold. The confidence score shows the probability for the selected label. These are estimates from the model, not proof of how the image was created.`
+                        : 'The model has not returned image probabilities yet.'}
                     </div>
                   </div>
+                </section>
+              ) : (
+                <section className="results-card">
+                  <h3 className="results-section-title">Video analysis details</h3>
+                  {hasModelResult && (
+                    <p className="results-video-frame-count">
+                      <strong>{lastAnalysis.framesAnalyzed}</strong>
+                      <span>frames analyzed · sampled up to 12 across the video</span>
+                    </p>
+                  )}
+                  <div className="results-signal">
+                    <div className="results-signal-header">
+                      <span>Frame score summary</span>
+                      <span>{hasModelResult ? lastAnalysis.label : 'Processing'}</span>
+                    </div>
+                    <div className="results-signal-description">
+                      {hasModelResult
+                        ? `The model sampled up to 12 frames across the video and analyzed ${lastAnalysis.framesAnalyzed}. Average fake probability: ${lastAnalysis.fakeProbability}%. Average real probability: ${lastAnalysis.realProbability}%. The decision threshold is ${(Number(lastAnalysis.threshold ?? 0.2) * 100).toFixed(0)}%, so the model labels the video FAKE only when its fake probability reaches that threshold.${lastAnalysis.faceFallbackUsed ? ' It used center crops because no faces were detected; treat this result as less reliable.' : ` Faces were detected in ${lastAnalysis.framesWithFace} frames.`}`
+                        : 'The video model has not returned an analysis yet.'}
+                    </div>
+                  </div>
+                  <ol className="results-video-steps">
+                    <li>Sample up to 12 frames across the video.</li>
+                    <li>Detect faces and score the sampled frames.</li>
+                    <li>Average frame scores and compare with the decision threshold.</li>
+                  </ol>
+                  {lastAnalysis.sampledFrames?.length > 0 && (
+                    <>
+                      <h4 className="results-video-frames-title">Frames analyzed by the model</h4>
+                      <div className="results-video-frame-grid">
+                        {lastAnalysis.sampledFrames.map((frame) => (
+                          <figure className="results-video-frame-card" key={frame.frame}>
+                            <img
+                              className="results-video-frame-image"
+                              src={frame.preview}
+                              alt={`Analyzed video frame ${frame.frame}`}
+                              loading="lazy"
+                            />
+                            <figcaption className="results-video-frame-caption">
+                              Frame {frame.frame} · {Math.round(frame.fake_probability * 100)}% fake score
+                            </figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </section>
               )}
             </div>
@@ -551,17 +758,33 @@ export const Results = () => {
             <aside className="results-card results-score-card">
               <div className="results-score-circle">
                 <span>
-                  {hasModelResult ? `${lastAnalysis.confidence}%` : 'Pending'}
+                  {hasModelResult ? `${displayedConfidence}%` : 'Pending'}
                 </span>
               </div>
 
               <div className="results-score-title">
-                {hasModelResult ? 'Confidence Estimate' : 'Model Status'}
+                {hasModelResult ? (lastAnalysis.type === 'video'
+                  ? 'Decision Confidence'
+                  : lastAnalysis.type === 'image'
+                    ? `${lastAnalysis.label === 'AI-Generated' ? 'AI' : 'Real'} Confidence`
+                    : 'Confidence Estimate') : 'Model Status'}
               </div>
+
+              {verdict && (
+                <p className="results-score-verdict">
+                  Verdict: {verdict}
+                </p>
+              )}
 
               <p className="results-score-description">
                 {hasModelResult
-                  ? (lastAnalysis.type === 'text' ? 'The model’s confidence in its assessment of this claim.' : 'Based on aggregated probability vectors across independent checks.')
+                  ? (lastAnalysis.type === 'text'
+                    ? 'The model’s confidence in its assessment of this claim.'
+                    : lastAnalysis.type === 'video'
+                      ? 'A threshold-distance heuristic, not the fake probability. A 53% score does not mean a 53% chance the video is fake.'
+                      : lastAnalysis.type === 'image'
+                        ? 'Probability estimate for the selected image label.'
+                        : 'Based on aggregated probability vectors across independent checks.')
                   : 'The analysis record is stored. Detailed scoring will be available after the model is connected.'}
               </p>
 
@@ -577,7 +800,7 @@ export const Results = () => {
 
               <button
                 className="results-new-button"
-                onClick={() => navigate('/text')}
+                onClick={() => navigate(lastAnalysis.type === 'image' ? '/image' : lastAnalysis.type === 'video' ? '/video' : '/text')}
               >
                 Analyze New Content
               </button>

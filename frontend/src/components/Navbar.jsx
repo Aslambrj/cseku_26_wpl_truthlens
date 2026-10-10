@@ -516,7 +516,7 @@ export const Navbar = () => {
 
       <nav className="truthlens-navbar">
         {/* Brand */}
-        <Link to="/" className="truthlens-brand">
+        <Link to={isAuthenticated ? '/home' : '/pricing'} className="truthlens-brand">
           <div className="truthlens-brand-logo">
             <svg
               width="18"
@@ -591,6 +591,15 @@ export const Navbar = () => {
                 History
               </NavLink>
 
+              <NavLink
+                to="/pricing"
+                className={({ isActive }) =>
+                  `truthlens-nav-link ${isActive ? 'active' : ''}`
+                }
+              >
+                Plans
+              </NavLink>
+
               {user?.role === 'admin' && (
                 <NavLink
                   to="/admin/users"
@@ -624,6 +633,15 @@ export const Navbar = () => {
             </>
           ) : (
             <>
+              <NavLink
+                to="/pricing"
+                className={({ isActive }) =>
+                  `truthlens-nav-link ${isActive ? 'active' : ''}`
+                }
+              >
+                Plans
+              </NavLink>
+
               <Link
                 to="/login"
                 className="truthlens-login-button"

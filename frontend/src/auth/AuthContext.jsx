@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { analyzeImage, analyzeText, createAnalysis, getAnalyses } from '../services/analysisService';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { analyzeImage, analyzeText, analyzeVideo, createAnalysis, getAnalyses } from '../services/analysisService';
 import { loginRequest, signupRequest } from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -81,8 +81,23 @@ export const AuthProvider = ({ children }) => {
     return completedAnalysis;
   };
 
+  const submitVideoAnalysis = async (file) => {
+    const { analysis, result } = await analyzeVideo(file.name, file);
+    setHistory((previous) => [analysis, ...previous]);
+    const completedAnalysis = {
+      ...result,
+      analysisId: analysis._id,
+      type: 'video',
+      content: file.name,
+      videoName: file.name,
+      videoFile: file,
+    };
+    setLastAnalysis(completedAnalysis);
+    return completedAnalysis;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, history, addHistoryItem, submitImageAnalysis, submitTextAnalysis, lastAnalysis }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, history, addHistoryItem, submitImageAnalysis, submitTextAnalysis, submitVideoAnalysis, lastAnalysis }}>
       {children}
     </AuthContext.Provider>
   );
