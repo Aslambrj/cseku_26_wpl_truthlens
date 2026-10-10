@@ -1,0 +1,16 @@
+﻿# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and caches
+node_modules/
+__pycache__/
+*.py[cod]
+
+# Temporary files
+_pptxbuild/
+_tmppip/
+
+# Large image-model test dataset
+/backend/Image Model/test_samples_v3.pkl
